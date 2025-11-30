@@ -1,4 +1,4 @@
-name: Build Android APK (debug)
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -6,72 +6,71 @@ on:
     branches: [ main ]
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-
-      - name: Cache node modules (npm)
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build web app (Vite)
+      - name: Build Vite project
         run: npm run build
-        # expects output directory `dist/`. If your build outputs to a different dir, update capacitor init/copy steps accordingly.
 
-      - name: Set up Java 17 (Temurin)
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Android SDK (required tools)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33
-          target: google_apis
-          arch: x86_64
-          force-avd-creation: false
+      - name: Install Android SDK (commandline tools)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdtools.zip
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          unzip cmdtools.zip -d $HOME/android-sdk/cmdline-tools
+          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/tools
+          echo "export ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "export PATH=$PATH:$HOME/android-sdk/cmdline-tools/tools/bin" >> $GITHUB_ENV
+          echo "export PATH=$PATH:$HOME/android-sdk/platform-tools" >> $GITHUB_ENV
+          echo "export PATH=$PATH:$HOME/android-sdk/build-tools" >> $GITHUB_ENV
+          echo "export PATH=$PATH:$HOME/android-sdk/emulator" >> $GITHUB_ENV
 
-      - name: Install Capacitor CLI globally
+      - name: Install required SDK packages
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+      - name: Install Capacitor CLI
         run: npm install -g @capacitor/cli
 
-      - name: Ensure android native project exists (create if missing)
+      - name: Initialize Capacitor android folder (if missing)
         run: |
-          # If android folder not present, initialize capacitor android project using the dist webDir
           if [ ! -d android ]; then
             npx cap init "Smart Work Mode" "com.example.smartwork" --web-dir=dist
             npx cap add android
           fi
 
-      - name: Copy web assets into Android project
+      - name: Copy web assets
         run: npx cap copy android
 
-      - name: Ensure gradlew is executable
+      - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK (Gradle)
+      - name: Build APK (debug)
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Upload debug APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: app-debug
           path: android/app/build/outputs/apk/debug/*.apk
