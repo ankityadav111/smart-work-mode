@@ -1,4 +1,4 @@
-name: Build Android APK (fixed: Node 20 + SDK)
+name: Build Android APK (CI)
 
 on:
   workflow_dispatch:
@@ -78,7 +78,6 @@ jobs:
 
       - name: Initialize Capacitor android folder (if missing)
         run: |
-          # Use npx from current Node (ensures compatibility)
           if [ ! -d android ]; then
             npx cap init "Smart Work Mode" "com.example.smartwork" --web-dir=dist
             npx cap add android
