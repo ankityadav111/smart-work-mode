@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Smart Work Mode</string>
+    <string name="title_activity_main">Smart Work Mode</string>
+    <string name="package_name">com.example.smartwork</string>
+    <string name="custom_url_scheme">com.example.smartwork</string>
+</resources>
