@@ -1,4 +1,4 @@
-name: Build Android APK (CI)
+name: Build Android APK (CI - fixed)
 
 on:
   workflow_dispatch:
@@ -82,6 +82,21 @@ jobs:
             npx cap init "Smart Work Mode" "com.example.smartwork" --web-dir=dist
             npx cap add android
           fi
+
+      # Ensure the missing cordova.variables.gradle file exists (CI quickfix)
+      - name: Ensure cordova.variables.gradle exists (CI quickfix)
+        run: |
+          mkdir -p android/capacitor-cordova-android-plugins
+          if [ ! -f android/capacitor-cordova-android-plugins/cordova.variables.gradle ]; then
+            cat > android/capacitor-cordova-android-plugins/cordova.variables.gradle <<'EOF'
+/*
+  Placeholder cordova.variables.gradle
+  Prevents Gradle include error when no Cordova plugin variables exist.
+*/
+EOF
+          fi
+          echo "Checked/created android/capacitor-cordova-android-plugins/cordova.variables.gradle"
+          ls -la android/capacitor-cordova-android-plugins || true
 
       - name: Copy web assets into Android project
         run: npx cap copy android
