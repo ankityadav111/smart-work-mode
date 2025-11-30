@@ -1,4 +1,4 @@
-name: Build Android APK (CI - fixed)
+name: Build Android APK (CI - Fixed)
 
 on:
   workflow_dispatch:
@@ -51,11 +51,10 @@ jobs:
             ls -la "$SDK_ROOT/cmdline-tools"
             exit 1
           fi
-          echo "SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
 
       - name: Install required SDK packages (use absolute sdkmanager)
-        env:
-          ANDROID_SDK_ROOT: ${{ runner.home }}/android-sdk
         run: |
           SDK_ROOT="$HOME/android-sdk"
           SDK_MANAGER="$SDK_ROOT/cmdline-tools/tools/bin/sdkmanager"
@@ -83,29 +82,15 @@ jobs:
             npx cap add android
           fi
 
-      - name: Ensure cordova.variables.gradle exists (CI quickfix)
-        run: |
-          mkdir -p android/capacitor-cordova-android-plugins
-          if [ ! -f android/capacitor-cordova-android-plugins/cordova.variables.gradle ]; then
-            cat > android/capacitor-cordova-android-plugins/cordova.variables.gradle <<'EOF'
-/*
-  Placeholder cordova.variables.gradle
-  Prevents Gradle include error when no Cordova plugin variables exist.
-*/
-EOF
-          fi
-          echo "Checked/created android/capacitor-cordova-android-plugins/cordova.variables.gradle"
-          ls -la android/capacitor-cordova-android-plugins || true
-
-      - name: Copy web assets into Android project
-        run: npx cap copy android
+      - name: Sync Capacitor project (replaces copy + cordova workaround)
+        run: npx cap sync android
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK (Gradle)
+      - name: Build debug APK (Gradle with verbose logging)
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
