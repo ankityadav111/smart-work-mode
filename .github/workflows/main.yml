@@ -32,47 +32,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Android commandline tools (download & extract)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          SDK_ROOT="$HOME/android-sdk"
-          mkdir -p "$SDK_ROOT"
-          mkdir -p "$SDK_ROOT/cmdline-tools"
-          unzip -q cmdline-tools.zip -d "$SDK_ROOT/cmdline-tools"
-          if [ -d "$SDK_ROOT/cmdline-tools/cmdline-tools" ]; then
-            mv "$SDK_ROOT/cmdline-tools/cmdline-tools" "$SDK_ROOT/cmdline-tools/tools"
-          fi
-          if [ -d "$SDK_ROOT/cmdline-tools/tools/bin" ]; then
-            ls -la "$SDK_ROOT/cmdline-tools/tools/bin"
-          else
-            echo "cmdline-tools layout unexpected, listing contents:"
-            ls -la "$SDK_ROOT/cmdline-tools"
-            exit 1
-          fi
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install required SDK packages (use absolute sdkmanager)
-        run: |
-          SDK_ROOT="$HOME/android-sdk"
-          SDK_MANAGER="$SDK_ROOT/cmdline-tools/tools/bin/sdkmanager"
-          chmod +x "$SDK_MANAGER"
-          mkdir -p "$SDK_ROOT"
-          ls -la "$SDK_ROOT"
-          yes | "$SDK_MANAGER" --sdk_root="$SDK_ROOT" --licenses || true
-          "$SDK_MANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
 
-      - name: Add Android SDK to PATH for following steps
+      - name: Install required Android SDK components
         run: |
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/cmdline-tools/tools/bin" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/build-tools/33.0.2" >> $GITHUB_PATH
-          ls -la $HOME/android-sdk || true
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      - name: Install Capacitor CLI globally (uses Node 20)
+      - name: Install Capacitor CLI globally
         run: npm install -g @capacitor/cli@latest
 
       - name: Initialize Capacitor android folder (if missing)
@@ -82,13 +52,13 @@ jobs:
             npx cap add android
           fi
 
-      - name: Sync Capacitor project (replaces copy + cordova workaround)
+      - name: Sync Capacitor project
         run: npx cap sync android
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK (Gradle with verbose logging)
+      - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
