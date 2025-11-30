@@ -83,7 +83,6 @@ jobs:
             npx cap add android
           fi
 
-      # Ensure the missing cordova.variables.gradle file exists (CI quickfix)
       - name: Ensure cordova.variables.gradle exists (CI quickfix)
         run: |
           mkdir -p android/capacitor-cordova-android-plugins
